@@ -1,0 +1,15 @@
+[package]
+name = "framework"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+actix-web = "4.9.0"
+cargo-watch = "8.5.3"
+chrono = "0.4.39"
+futures-util = "0.3.31"
+tokio = { version = "1", features = ["full"] }
+mongodb = "3.1.1"
+serde = { version = "1.0.216", features = ["derive"] }
+dotenv = "0.15.0"
+
