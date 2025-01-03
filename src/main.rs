@@ -1,14 +1,17 @@
 mod models;
-mod db;
 mod services;
 mod controllers;
 mod repo;
 mod routes;
+mod config;
+mod utill;
+mod midleware;
+mod exceptions;
 
 use actix_web::{web, App, HttpServer};
 use actix_web::web::{Data};
 use dotenv::dotenv;
-use crate::db::mongo::get_mongo_client;
+use crate::config::database::get_mongo_client;
 use crate::routes::routes::user_route;
 
 #[actix_web::main]
