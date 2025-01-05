@@ -12,4 +12,5 @@ tokio = { version = "1", features = ["full"] }
 mongodb = "3.1.1"
 serde = { version = "1.0.216", features = ["derive"] }
 dotenv = "0.15.0"
+jsonwebtoken = "9.3.0"
 
