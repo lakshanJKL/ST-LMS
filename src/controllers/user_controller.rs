@@ -4,7 +4,7 @@ use crate::models::user_model::{CreateUser, UpdateUser};
 use crate::services::user_service:: UserService;
 
 //Create a new user (POST /users)
-#[post("/users")]
+#[post("/create")]
 pub async fn create_user_controller(service:Data<UserService>, create_user:Json<CreateUser>) ->HttpResponse{
 
     match service.create_user_service(create_user.into_inner()).await {
