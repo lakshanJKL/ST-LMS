@@ -1,6 +1,7 @@
 use mongodb::error::Result;
-use crate::models::user_model::{CreateUser, UpdateUser, User};
+use crate::models::user_model::{CreateUser, UpdateUser, User, UserLoginDto};
 use crate::repo::user_repo::UserRepo;
+use crate::utill::jwt::create_token;
 
 pub struct UserService{
     repo:UserRepo
@@ -9,6 +10,10 @@ pub struct UserService{
 impl UserService{
     pub fn new(repo:UserRepo)->Self{
         UserService{repo}
+    }
+
+    pub async fn user_login_service(&self,dto:UserLoginDto)->Result<Option<String>>{
+        self.repo.user_login(dto).await
     }
 
     pub async fn create_user_service(&self, user: CreateUser) ->Result<User>{

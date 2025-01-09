@@ -11,19 +11,19 @@ pub struct Claims{
 }
 
 impl Claims {
-    pub fn new(use_id:String)->Self{
+    pub fn new(use_email:String)->Self{
         let expiration = Utc::now()+ Duration::hours(24); // Token valid for 24 hours
         Self{
-            sub:use_id,
+            sub:use_email,
             exp: expiration.timestamp() as usize,
         }
     }
 }
 
 // Generate a JWT token
-pub fn create_token(user_id:String)->Result<String,jsonwebtoken::errors::Error>{
+pub fn create_token(user_email:String)->Result<String,jsonwebtoken::errors::Error>{
     let secret = env::var("SECRET_KEY").expect("JWT_SECRET must be set");
-    let claims = Claims::new(user_id);
+    let claims = Claims::new(user_email);
     encode(&Header::default(),&claims,&EncodingKey::from_secret(secret.as_ref()))
 }
 
