@@ -1,7 +1,6 @@
 use mongodb::error::Result;
 use crate::models::user_model::{CreateUser, UpdateUser, User, UserLoginDto};
 use crate::repo::user_repo::UserRepo;
-use crate::utill::jwt::create_token;
 
 pub struct UserService{
     repo:UserRepo

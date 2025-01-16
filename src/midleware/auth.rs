@@ -4,14 +4,14 @@ use futures::future::{ok, LocalBoxFuture, Ready};
 use actix_web::dev::{Service, ServiceRequest, ServiceResponse, Transform};
 use actix_web::{Error, HttpResponse};
 use actix_web::body::BoxBody;
-use actix_web::http::header::{HeaderName, HeaderValue};
-use crate::utill::jwt::verify_token;
+use crate::utill::jwt::{extract_and_check_role_from_token};
+
 
 pub struct JwtMiddleware;
 
 impl<S, B> Transform<S, ServiceRequest> for JwtMiddleware
 where
-    S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error> + 'static,
+    S: Service<ServiceRequest, Response=ServiceResponse<B>, Error=Error> + 'static,
     S::Future: 'static,
     B: From<BoxBody> + 'static,
 {
@@ -34,7 +34,7 @@ pub struct JwtMiddlewareService<S> {
 
 impl<S, B> Service<ServiceRequest> for JwtMiddlewareService<S>
 where
-    S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error> + 'static,
+    S: Service<ServiceRequest, Response=ServiceResponse<B>, Error=Error> + 'static,
     S::Future: 'static,
     B: From<BoxBody> + 'static,
 {
@@ -57,18 +57,9 @@ where
                 return srv.call(req).await;
             }
 
-            // Check for the Authorization header
-            if let Some(auth_header) = req.headers().get("Authorization") {
-                if let Ok(auth_str) = auth_header.to_str() {
-                    if auth_str.starts_with("Bearer ") {
-                        let token = &auth_str[7..]; // Extract the token part
-
-                        if verify_token(token).is_ok() {
-                            // Token is valid, pass the request to the service
-                            return srv.call(req).await;
-                        }
-                    }
-                }
+            if extract_and_check_role_from_token(&req) {
+                // User has required role, pass the request to the service
+                return srv.call(req).await;
             }
 
             // Unauthorized response for missing/invalid token
@@ -76,12 +67,12 @@ where
                 .insert_header(("content-type", "text/plain"))
                 .body("Unauthorized: Missing or invalid token");
 
-            let (req_parts, _) = req.into_parts(); // Extract request parts
-            let service_response = ServiceResponse::new(req_parts, response.map_into_boxed_body());
+            let (req_parts, _) = req.into_parts();
+            let service_response =
+                ServiceResponse::new(req_parts, response.map_into_boxed_body());
             let service_response = service_response.map_body(|_, body| B::from(body));
 
             Ok(service_response)
         })
     }
-
 }

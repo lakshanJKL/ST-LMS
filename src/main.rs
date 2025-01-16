@@ -11,7 +11,7 @@ use actix_web::{get, App, HttpResponse, HttpServer, Responder};
 use actix_web::web::{Data};
 use dotenv::dotenv;
 use crate::config::database::get_mongo_client;
-use crate::config::app::user_config;
+use crate::config::app::{app_config};
 use crate::midleware::auth::JwtMiddleware;
 use crate::repo::user_repo::UserRepo;
 use crate::services::user_service::UserService;
@@ -32,15 +32,16 @@ async fn main() -> std::io::Result<()> {
     let user_service_data = UserService::new(user_repo);
     let user_service = Data::new(user_service_data);
 
+
     // start the HTTP server
     let server = HttpServer::new(move || {
         App::new()
             .app_data(user_service.clone())
             .wrap(JwtMiddleware)
             .service(test)
-            .configure(user_config)
+            .configure(app_config)
     })
         .bind(("localhost", 8001))?;
-         println!("Server running on http://localhost:8001");
-         server.run().await
+    println!("Server running on http://localhost:8001");
+    server.run().await
 }

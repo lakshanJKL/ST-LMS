@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 pub struct User{
     pub name: String,
     pub email: String,
+    pub role:String,
     pub password: String,
 }
 
@@ -26,5 +27,5 @@ pub struct UserLoginDto{
 pub struct UpdateUser{
     pub name: Option<String>,
     pub email: Option<String>,
-    pub password: String,
+    pub password: Option<String>,
 }
