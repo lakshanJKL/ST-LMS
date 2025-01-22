@@ -1,21 +1,19 @@
 use std::rc::Rc;
 use std::task::{Context, Poll};
 use futures::future::{ok, LocalBoxFuture, Ready};
+use actix_web::body::{BoxBody, EitherBody};
 use actix_web::dev::{Service, ServiceRequest, ServiceResponse, Transform};
 use actix_web::{Error, HttpResponse};
-use actix_web::body::BoxBody;
-use crate::utill::jwt::{extract_and_check_role_from_token};
-
+use crate::utill::jwt::extract_and_check_role_from_token;
 
 pub struct JwtMiddleware;
 
-impl<S, B> Transform<S, ServiceRequest> for JwtMiddleware
+impl<S> Transform<S, ServiceRequest> for JwtMiddleware
 where
-    S: Service<ServiceRequest, Response=ServiceResponse<B>, Error=Error> + 'static,
+    S: Service<ServiceRequest, Response = ServiceResponse<EitherBody<BoxBody>>, Error = Error> + 'static,
     S::Future: 'static,
-    B: From<BoxBody> + 'static,
 {
-    type Response = ServiceResponse<B>;
+    type Response = ServiceResponse<EitherBody<BoxBody>>;
     type Error = Error;
     type Transform = JwtMiddlewareService<S>;
     type InitError = ();
@@ -32,13 +30,12 @@ pub struct JwtMiddlewareService<S> {
     service: Rc<S>,
 }
 
-impl<S, B> Service<ServiceRequest> for JwtMiddlewareService<S>
+impl<S> Service<ServiceRequest> for JwtMiddlewareService<S>
 where
-    S: Service<ServiceRequest, Response=ServiceResponse<B>, Error=Error> + 'static,
+    S: Service<ServiceRequest, Response = ServiceResponse<EitherBody<BoxBody>>, Error = Error> + 'static,
     S::Future: 'static,
-    B: From<BoxBody> + 'static,
 {
-    type Response = ServiceResponse<B>;
+    type Response = ServiceResponse<EitherBody<BoxBody>>;
     type Error = Error;
     type Future = LocalBoxFuture<'static, Result<Self::Response, Self::Error>>;
 
@@ -53,12 +50,10 @@ where
         Box::pin(async move {
             // Exclude certain paths from middleware
             if path == "/signup" || path == "/login" {
-                // Pass the request without checking for authentication
                 return srv.call(req).await;
             }
 
             if extract_and_check_role_from_token(&req) {
-                // User has required role, pass the request to the service
                 return srv.call(req).await;
             }
 
@@ -69,8 +64,7 @@ where
 
             let (req_parts, _) = req.into_parts();
             let service_response =
-                ServiceResponse::new(req_parts, response.map_into_boxed_body());
-            let service_response = service_response.map_body(|_, body| B::from(body));
+                ServiceResponse::new(req_parts, response.map_into_right_body());
 
             Ok(service_response)
         })

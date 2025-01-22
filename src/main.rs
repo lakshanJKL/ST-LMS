@@ -7,12 +7,14 @@ mod utill;
 mod midleware;
 mod exceptions;
 
+use actix_cors::Cors;
 use actix_web::{get, App, HttpResponse, HttpServer, Responder};
 use actix_web::web::{Data};
 use dotenv::dotenv;
 use crate::config::database::get_mongo_client;
 use crate::config::app::{app_config};
 use crate::midleware::auth::JwtMiddleware;
+use crate::midleware::cors::cors;
 use crate::repo::user_repo::UserRepo;
 use crate::services::user_service::UserService;
 
@@ -37,6 +39,7 @@ async fn main() -> std::io::Result<()> {
     let server = HttpServer::new(move || {
         App::new()
             .app_data(user_service.clone())
+            .wrap(cors())
             .wrap(JwtMiddleware)
             .service(test)
             .configure(app_config)
