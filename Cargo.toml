@@ -19,5 +19,7 @@ argon2 = "0.5.3"
 rand_core = "0.6.4"
 actix-cors = "0.7.0"
 http = "0.2.12"
-
-
+validator = { version = "0.16", features = ["derive"] }
+actix-web-validator = "6.0.0"
+anyhow = "1.0.95"
+thiserror = "1.0"

@@ -15,6 +15,7 @@ use crate::config::database::get_mongo_client;
 use crate::config::app::{app_config};
 use crate::midleware::auth::JwtMiddleware;
 use crate::midleware::cors::cors;
+use crate::midleware::security_headers::security_headers;
 use crate::repo::user_repo::UserRepo;
 use crate::services::user_service::UserService;
 
@@ -41,6 +42,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(user_service.clone())
             .wrap(cors())
             .wrap(JwtMiddleware)
+            .wrap(security_headers())
             .service(test)
             .configure(app_config)
     })

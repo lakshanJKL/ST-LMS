@@ -1,4 +1,7 @@
+use anyhow::anyhow;
 use mongodb::error::Result;
+use validator::Validate;
+use crate::exceptions::errors::UserServiceError::ValidationError;
 use crate::models::user_model::{CreateUser, UpdateUser, User, UserLoginDto};
 use crate::repo::user_repo::UserRepo;
 
@@ -16,7 +19,6 @@ impl UserService{
     }
 
     pub async fn create_user_service(&self, user: CreateUser) ->Result<User>{
-        println!("service {:?}",user);
         self.repo.create_new_user(user).await
     }
 
