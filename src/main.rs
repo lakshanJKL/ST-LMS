@@ -7,7 +7,7 @@ mod utill;
 mod midleware;
 mod exceptions;
 
-use actix_cors::Cors;
+
 use actix_web::{get, App, HttpResponse, HttpServer, Responder};
 use actix_web::web::{Data};
 use dotenv::dotenv;

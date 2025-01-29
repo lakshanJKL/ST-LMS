@@ -17,15 +17,16 @@ pub fn hash_password(password: &str) -> Result<String, argon2::password_hash::Er
 
 
 pub fn verify_password(password: &str, hashed_password: &str) -> Result<bool, argon2::password_hash::Error> {
-    // Parse the hashed password into a `PasswordHash` struct
+    // Parse the hashed password
     let parsed_hash = PasswordHash::new(hashed_password)?;
 
-    // Use the Argon2 default configuration for verification
+    // Use Argon2 to verify the password
     let argon2 = Argon2::default();
 
-    // Verify the password against the parsed hash
+    // Return true if password is correct, otherwise return the actual error
     match argon2.verify_password(password.as_bytes(), &parsed_hash) {
         Ok(_) => Ok(true),
-        Err(_) => Ok(false),
+        Err(e) => Err(e), // Return the actual error
     }
 }
+
