@@ -1,4 +1,5 @@
 use futures_util::TryStreamExt;
+use log::{error, info, warn};
 use mongodb::{bson::{doc}, Collection, Database};
 use mongodb::bson::oid::ObjectId;
 use crate::exceptions::errors::{SystemError, JwtError, PasswordError };
@@ -28,19 +29,27 @@ impl UserRepo {
             let is_verify= verify_password(&user_dto.password, &user.password)
                 .unwrap_or_else(|e| false);
 
-            println!("is verify : {}",is_verify);
             if is_verify {
                 // Generate JWT token on successful login
                     let token = create_token(user.email, roles);
+
                     match token {
-                        Ok(token) => Ok(Some(token)),
-                        Err(_) => Err(SystemError::JwtError(JwtError::TokenError("Failed to generate token".to_string()))),
+                        Ok(token) =>{
+                            info!("token created successfully: {:?}",token);
+                            Ok(Some(token))
+                        },
+                        Err(_) =>{
+                            error!("token not created");
+                            Err(SystemError::JwtError(JwtError::TokenError("Failed to generate token".to_string())))
+                        },
                     }
 
             }else {
+               warn!("invalid password {:?}",user_dto.password);
                Err(SystemError::PasswordError(PasswordError::InvalidPassword(user_dto.password)))
             }
         } else {
+            error!("not found :{:?}",user_dto.username);
             Err(SystemError::NotFoundError(user_dto.username))
         }
     }
@@ -63,15 +72,26 @@ impl UserRepo {
             password: hash_pw,
         };
 
-        self.collection.insert_one(&new_user).await.ok().expect("Error creating user");
-        Ok(new_user)
+        match self.collection.insert_one(&new_user).await {
+            Ok(_) =>{
+                info!("user created successfully {:?}",new_user);
+                Ok(new_user)
+            },
+            Err(e) =>{
+                error!("user create failed");
+                Err(SystemError::MongoError(e))
+            }
+        }
     }
 
     //all user
-    pub async fn get_all_users(&self) -> mongodb::error::Result<Vec<User>> {
+    pub async fn get_all_users(&self) ->Result<Vec<User>,SystemError> {
         let filter = doc! {};
-        let cursor = self.collection.find(filter).await?;
-        cursor.try_collect().await
+        let cursor = self.collection.find(filter).await.map_err(SystemError::MongoError)?; // Handle MongoDB error
+        let users = cursor.try_collect::<Vec<User>>().await.map_err(SystemError::MongoError)?; // Convert Cursor to Vec<User>
+
+        info!("users get successfully");
+        Ok(users)
     }
 
     //update user
@@ -110,8 +130,14 @@ impl UserRepo {
 
         // Perform update and return the updated user
         match self.collection.find_one_and_update(filter, update).await {
-            Ok(updated_user) => Ok(updated_user),
-            Err(e) => Err(SystemError::MongoError(e)), // Convert MongoDB error to `DatabaseError`
+            Ok(updated_user) => {
+                info!("user updated successfully {:?}",updated_user);
+                Ok(updated_user)
+            },
+            Err(e) => {
+                error!("user update failed");
+                Err(SystemError::MongoError(e))    // Convert MongoDB error to `DatabaseError`
+            },
         }
     }
 
@@ -121,7 +147,7 @@ impl UserRepo {
         let object_id = match ObjectId::parse_str(&id) {
             Ok(oid) => oid,
             Err(_) => {
-                eprintln!("Invalid ObjectId: {}", id);
+                warn!("Invalid object id : {:?}",id);
                 return Err(SystemError::ValidationError("Invalid ObjectId".to_string()));
             }
         };
@@ -131,7 +157,13 @@ impl UserRepo {
             return  Err(SystemError::NotFoundError(object_id.to_string()+" id"))
         }
 
-        self.collection.delete_one(filter).await?;
+        let delete_result = self.collection.delete_one(filter).await.map_err(SystemError::MongoError)?;
+        if delete_result.deleted_count == 0 {
+            warn!("No user deleted, possibly because the id did not exist: {:?}", object_id);
+            return Err(SystemError::NotFoundError(object_id.to_string()));
+        }
+
+        info!("User deleted successfully with id: {:?}", object_id);
         Ok(())
     }
 
