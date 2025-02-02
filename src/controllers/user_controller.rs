@@ -1,5 +1,6 @@
 use actix_web::{delete, get, post, put, web, HttpRequest, HttpResponse};
 use actix_web::web::{Data, Json};
+use log::info;
 use serde_json::json;
 use validator::Validate;
 use crate::midleware::permission::{Permission, Role};
@@ -11,6 +12,7 @@ use crate::utill::jwt::{has_permission_with_roles};
 //login user (POST /users)
 #[post("/login")]
 pub async fn user_login_controller(service: Data<UserService>, user: Json<UserLoginDto>) -> HttpResponse {
+    info!("Received request to login user: {:?}",user.username);
     // validation
     if let Err(err) = user.validate() {
         return HttpResponse::BadRequest().body(err.to_string());
@@ -34,6 +36,7 @@ pub async fn user_login_controller(service: Data<UserService>, user: Json<UserLo
 //signup a new user (POST /users)
 #[post("/signup")]
 pub async fn create_user_controller(service: Data<UserService>, create_user: Json<CreateUser>) -> HttpResponse {
+    info!("Received request to create user: {:?}",create_user.email);
     // validation
     if let Err(err) = create_user.validate() {
         return HttpResponse::BadRequest().body(err.to_string());
@@ -55,6 +58,7 @@ pub async fn create_user_controller(service: Data<UserService>, create_user: Jso
 // Create a new user (GET/users)
 #[get("/get-all")]
 pub async fn get_all_users_controller(service: Data<UserService>, req: HttpRequest) -> HttpResponse {
+    info!("Received request to get all users");
     // permission
     if !has_permission_with_roles(&req, &vec![Role::Admin], &Permission::Read) {
         return HttpResponse::Forbidden().body("You do not have permission to get users.");
@@ -95,6 +99,7 @@ pub async fn get_all_users_controller(service: Data<UserService>, req: HttpReque
 //Update a user by ID (PUT /users/{id})
 #[put("/update/{id}")]
 pub async fn update_user_controller(service: Data<UserService>, update_user: Json<UpdateUser>, id: web::Path<String>, req: HttpRequest) -> HttpResponse {
+    info!("Received request to update user: {:?}",id);
     // permission
     if !has_permission_with_roles(&req, &vec![Role::Admin], &Permission::Write) {
         return HttpResponse::Forbidden().body("You do not have permission to update users.");
@@ -104,7 +109,6 @@ pub async fn update_user_controller(service: Data<UserService>, update_user: Jso
         return HttpResponse::BadRequest().body(err.to_string());
     }
 
-    println!("user id : {}", &id);
     match service.update_user_service(update_user.into_inner(), id.to_string()).await {
         Ok(Some(user)) => {
             let response = GenericResponse {
@@ -115,13 +119,14 @@ pub async fn update_user_controller(service: Data<UserService>, update_user: Jso
             HttpResponse::Created().json(response)
         }
         Ok(None) => HttpResponse::NotFound().body("user not found"),
-        Err(e) => HttpResponse::InternalServerError().body( e.to_string())
+        Err(e) => HttpResponse::InternalServerError().body(e.to_string())
     }
 }
 
 // Delete a user by ID (DELETE /users/{id})
 #[delete("/delete/{id}")]
 pub async fn delete_user_controller(service: Data<UserService>, id: web::Path<String>, req: HttpRequest) -> HttpResponse {
+    info!("Received request to delete user: {:?}",id);
     // permission
     if !has_permission_with_roles(&req, &vec![Role::Admin], &Permission::Delete) {
         return HttpResponse::Forbidden().body("You do not have permission to delete users.");
@@ -135,7 +140,7 @@ pub async fn delete_user_controller(service: Data<UserService>, id: web::Path<St
                 data: (),
             };
             HttpResponse::NoContent().json(response)
-        },
+        }
         Err(e) => HttpResponse::InternalServerError().body(e.to_string())
     }
 }

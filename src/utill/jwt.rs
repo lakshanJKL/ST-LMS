@@ -77,7 +77,6 @@ pub fn extract_and_check_role_from_token(req: &ServiceRequest) -> bool {
 // Check if a user has any of the specified roles
 
 fn has_any_role(req: &HttpRequest, allowed_roles: &Vec<Role>) -> bool {
-
     if let Some(token_string) = extract_token(req) {
         if let Ok(data) = verify_token(&token_string) {
             let claims = data.claims;

@@ -44,9 +44,10 @@ pub struct UpdateUser {
     pub password: Option<String>,
 }
 
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct QueryOptions {
-    pub search_text: &'static str,
+    pub search_text: Option<str>,
     pub page: i32,
     pub size: i32,
 

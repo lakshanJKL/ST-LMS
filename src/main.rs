@@ -19,6 +19,7 @@ use crate::midleware::auth::JwtMiddleware;
 use crate::midleware::cors::cors;
 use crate::midleware::loggers::logger;
 use crate::midleware::security_headers::security_headers;
+use crate::repo::audit_log_repo::AuditLogRepo;
 use crate::repo::user_repo::UserRepo;
 use crate::services::user_service::UserService;
 
@@ -40,10 +41,10 @@ async fn main() -> std::io::Result<()> {
 
     // // Initialize repositories & services
     let db = get_mongo_client().await.expect("Failed to connect to database");
-    let user_repo = UserRepo::new(db.clone()).await;
+    let log_repo = AuditLogRepo::new(&db.clone()).await;
+    let user_repo = UserRepo::new(&db.clone(),log_repo).await;
     let user_service_data = UserService::new(user_repo);
     let user_service = Data::new(user_service_data);
-
 
 
     // start the HTTP server

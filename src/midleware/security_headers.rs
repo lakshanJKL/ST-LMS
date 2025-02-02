@@ -6,15 +6,15 @@ pub fn security_headers() -> DefaultHeaders {
     DefaultHeaders::new()
         // Enforce HTTPS with HSTS
         .header(header::STRICT_TRANSPORT_SECURITY,
-                "max-age=31536000; includeSubDomains; preload"
+                "max-age=31536000; includeSubDomains; preload",
         )
         // Prevent click jacking
         .header(header::X_FRAME_OPTIONS,
-                "DENY"
+                "DENY",
         )
         // Prevent MIME type sniffing
         .header(header::X_CONTENT_TYPE_OPTIONS,
-                "nosniff"
+                "nosniff",
         )
         // Control content sources
         .header(
@@ -23,7 +23,7 @@ pub fn security_headers() -> DefaultHeaders {
         )
         // Protect privacy by controlling referrer data
         .header(header::REFERRER_POLICY,
-                "strict-origin-when-cross-origin"
+                "strict-origin-when-cross-origin",
         )
         // Restrict access to browser features
         .header(
@@ -32,19 +32,18 @@ pub fn security_headers() -> DefaultHeaders {
         )
         // Protect against cross-site scripting (XSS)
         .header(header::X_XSS_PROTECTION,
-                "0"
+                "0",
         )
         // Prevent cache storage of sensitive data
         .header(header::CACHE_CONTROL,
-                "no-store, no-cache, must-revalidate, proxy-revalidate"
+                "no-store, no-cache, must-revalidate, proxy-revalidate",
         )
         .header(header::PRAGMA,
-                "no-cache"
+                "no-cache",
         )
         .header(header::EXPIRES,
-                "0"
+                "0",
         )
         // Optionally remove server signature (Actix exposes this by default)
         .header(header::SERVER, "")
-
 }

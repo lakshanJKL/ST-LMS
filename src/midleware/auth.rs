@@ -10,7 +10,7 @@ pub struct JwtMiddleware;
 
 impl<S> Transform<S, ServiceRequest> for JwtMiddleware
 where
-    S: Service<ServiceRequest, Response = ServiceResponse<EitherBody<BoxBody>>, Error = Error> + 'static,
+    S: Service<ServiceRequest, Response=ServiceResponse<EitherBody<BoxBody>>, Error=Error> + 'static,
     S::Future: 'static,
 {
     type Response = ServiceResponse<EitherBody<BoxBody>>;
@@ -32,7 +32,7 @@ pub struct JwtMiddlewareService<S> {
 
 impl<S> Service<ServiceRequest> for JwtMiddlewareService<S>
 where
-    S: Service<ServiceRequest, Response = ServiceResponse<EitherBody<BoxBody>>, Error = Error> + 'static,
+    S: Service<ServiceRequest, Response=ServiceResponse<EitherBody<BoxBody>>, Error=Error> + 'static,
     S::Future: 'static,
 {
     type Response = ServiceResponse<EitherBody<BoxBody>>;

@@ -1,8 +1,8 @@
 use std::env;
-use mongodb::{Client, Database,error::Result};
+use mongodb::{Client, Database, error::Result};
 
 /// Connect to MongoDB
-pub async fn get_mongo_client() ->Result<Database>{
+pub async fn get_mongo_client() -> Result<Database> {
     dotenv::dotenv().ok();
 
     let mongo_uri = env::var("MONGO_URI").expect("MONGO_URI must be set");

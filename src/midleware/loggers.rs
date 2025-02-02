@@ -1,6 +1,6 @@
 use actix_web::middleware::Logger;
 
-pub fn logger() ->Logger{
+pub fn logger() -> Logger {
     Logger::new("%a %{User-Agent}i %r %s %b %Dms")
 }
 
