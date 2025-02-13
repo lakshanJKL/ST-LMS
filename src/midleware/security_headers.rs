@@ -1,6 +1,5 @@
 use actix_web::middleware::DefaultHeaders;
 use actix_web::http::header;
-use actix_web::web::head;
 
 pub fn security_headers() -> DefaultHeaders {
     DefaultHeaders::new()

@@ -1,4 +1,5 @@
-use std::borrow::Cow;
+use regex::Regex;
+use uuid::Uuid;
 use validator::ValidationError;
 //pub type Result<T> = std::result::Result<T,UserServiceError>;
 
@@ -23,20 +24,25 @@ use validator::ValidationError;
 //     }
 // }
 
-// custom email validation
-pub fn custom_email_check(value: &str) -> Result<(), ValidationError> {
-    if value.contains("@") {
+// custom text validation
+pub fn custom_text_check(value: &str) -> Result<(), ValidationError> {
+    if value.is_empty() {
+        return Ok(());
+    }
+
+    let regex_value = Regex::new(r"^[a-zA-Z\s]+$").unwrap();
+    if regex_value.is_match(value) {
         Ok(())
     } else {
-        Err(ValidationError::new("Invalid email, email must be like example@info.com"))
+        Err(ValidationError::new("Invalid search text: Only letters, spaces are allowed"))
     }
 }
 
 // custom password validation
-pub fn custom_password_check(value: &str) -> Result<(), ValidationError> {
-    if value.len() <= 4 {
+pub fn custom_uuid_check(value: &str) -> Result<(), ValidationError> {
+    if Uuid::parse_str(value).is_ok() {
         Ok(())
     } else {
-        Err(ValidationError::new("password is invalid, password must be at least 4 characters long"))
+        Err(ValidationError::new("Invalid UUID format"))
     }
 }

@@ -64,7 +64,7 @@ pub fn extract_and_check_role_from_token(req: &ServiceRequest) -> bool {
         if let Ok(data) = verify_token(token) {
             let claims = data.claims;
 
-            let allowed_roles = vec![Role::Admin, Role::User, Role::Guest];
+            let allowed_roles = vec![Role::Admin, Role::User, Role::Student];
             return claims.roles.iter()
                 .filter_map(|r| Role::from_str(r)) // Parse string to Role
                 .any(|role| allowed_roles.contains(&role));

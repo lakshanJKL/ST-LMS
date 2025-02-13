@@ -4,7 +4,7 @@ use std::collections::HashMap;
 pub enum Role {
     Admin,
     User,
-    Guest,
+    Student,
 }
 
 #[derive(Debug, PartialEq, Eq, Hash)]
@@ -19,7 +19,7 @@ impl Role {
         match role {
             "Admin" => Some(Role::Admin),
             "User" => Some(Role::User),
-            "Guest" => Some(Role::Guest),
+            "Guest" => Some(Role::Student),
             _ => None, // Unknown role
         }
     }
@@ -32,7 +32,7 @@ fn get_role_permission() -> HashMap<Role, Vec<Permission>> {
 
     role_permission.insert(Role::Admin, vec![Permission::Write, Permission::Read, Permission::Delete]);
     role_permission.insert(Role::User, vec![Permission::Write, Permission::Read]);
-    role_permission.insert(Role::Guest, vec![Permission::Read]);
+    role_permission.insert(Role::Student, vec![Permission::Read]);
 
     role_permission
 }

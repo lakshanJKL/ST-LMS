@@ -1,147 +1,136 @@
 use actix_web::{delete, get, post, put, web, HttpRequest, HttpResponse};
-use actix_web::web::{Data, Json};
-use log::info;
-use serde_json::json;
+use actix_web::body::MessageBody;
+use actix_web::web::{Data, Json, Path, Query};
+use log::{error, info};
+use sea_orm::DatabaseConnection;
+use uuid::Uuid;
 use validator::Validate;
 use crate::midleware::permission::{Permission, Role};
-use crate::models::user_model::{CreateUser, UpdateUser, UserLoginDto};
-use crate::services::user_service::UserService;
+use crate::models::user_model::{LoginRequestDto, UserQueryOptions, UserRequestDto};
+use crate::services::user_service::{create_user_service, delete_user_service, get_all_paginate_service, update_user_service, user_login_service};
 use crate::utill::generic_response::GenericResponse;
 use crate::utill::jwt::{has_permission_with_roles};
 
-//login user (POST /users)
+
 #[post("/login")]
-pub async fn user_login_controller(service: Data<UserService>, user: Json<UserLoginDto>) -> HttpResponse {
-    info!("Received request to login user: {:?}",user.username);
-    // validation
-    if let Err(err) = user.validate() {
-        return HttpResponse::BadRequest().body(err.to_string());
+pub async fn user_login_controller(db: Data<DatabaseConnection>, dto: Json<LoginRequestDto>) -> HttpResponse {
+
+    //input validation
+    if let Err(e) = dto.validate() {
+        return HttpResponse::BadRequest().body(e.to_string());
     }
 
-    match service.user_login_service(user.into_inner()).await {
+    match user_login_service(&db, dto.into_inner()).await {
         Ok(Some(token)) => {
-            let response = GenericResponse {
+            let res = GenericResponse {
                 code: 200,
-                message: "Token created".to_string(),
+                message: "successfully logged in".to_string(),
                 data: token,
             };
-
-            HttpResponse::Ok().json(response)
+            info!("User successfully logged in : {:?}", res);
+            HttpResponse::Ok().json(res)
         }
-        Ok(None) => HttpResponse::Unauthorized().json(json!({ "error": "Invalid credentials" })),
+        Ok(None) => HttpResponse::Unauthorized().body("Invalid credentials".to_string()),
+        Err(e) => {
+            error!("User failed successfully logged in {:?}",e);
+            HttpResponse::InternalServerError().body(e.to_string())
+        }
+    }
+}
+
+#[post("/signup")]
+pub async fn create_user_controller(db: Data<DatabaseConnection>, dto: Json<UserRequestDto>) -> HttpResponse {
+    // input validation
+    if let Err(e) = dto.validate() {
+        return HttpResponse::BadRequest().body(e.to_string());
+    }
+
+    match create_user_service(&db, dto.into_inner()).await {
+        Ok(user) => {
+            let res = GenericResponse {
+                code: 201,
+                message: "user has created".to_string(),
+                data: user,
+            };
+            info!("User successfully created : {:?}", res);
+            HttpResponse::Created().json(res)
+        }
+        Err(e) => {
+            error!("User not created : error :: {:?}",e);
+            HttpResponse::InternalServerError().body(e.to_string())
+        }
+    }
+}
+
+#[put("/update/{id}")]
+pub async fn update_user_controller(db: Data<DatabaseConnection>, id: Path<String>, dto: Json<UserRequestDto>, req: HttpRequest) -> HttpResponse {
+    if !has_permission_with_roles(&req, &vec![Role::Admin], &Permission::Write) {
+        return HttpResponse::Forbidden().body("You do not have permission to update users");
+    }
+
+    // input validation
+    if let Err(e) = dto.validate() {
+        return HttpResponse::BadRequest().body(e.to_string());
+    }
+
+    match update_user_service(&db, id.to_string(), dto.into_inner()).await {
+        Ok(user) => {
+            let res = GenericResponse {
+                code: 201,
+                message: "user has updated".to_string(),
+                data: user,
+            };
+            info!("User successfully updated: {:?}", res);
+            HttpResponse::Created().json(res)
+        }
+
+        Err(e) => {
+            error!("User not updated : error :: {:?}",e);
+            HttpResponse::InternalServerError().body(e.to_string())
+        }
+    }
+}
+
+#[delete("delete/{id}")]
+pub async fn delete_user_controller(db: Data<DatabaseConnection>, id: Path<String>, req: HttpRequest) -> HttpResponse {
+    if !has_permission_with_roles(&req, &vec![Role::Admin], &Permission::Delete) {
+        return HttpResponse::Forbidden().body("You do not have permission to delete users");
+    }
+
+    match delete_user_service(&db, id.to_string()).await {
+        Ok(_) => HttpResponse::NoContent().finish(),
         Err(e) => HttpResponse::InternalServerError().body(e.to_string())
     }
 }
 
-//signup a new user (POST /users)
-#[post("/signup")]
-pub async fn create_user_controller(service: Data<UserService>, create_user: Json<CreateUser>) -> HttpResponse {
-    info!("Received request to create user: {:?}",create_user.email);
-    // validation
-    if let Err(err) = create_user.validate() {
-        return HttpResponse::BadRequest().body(err.to_string());
-    }
-
-    match service.create_user_service(create_user.into_inner()).await {
-        Ok(user) => {
-            let response = GenericResponse {
-                code: 200,
-                message: "User has created".to_string(),
-                data: user,
-            };
-            HttpResponse::Created().json(response)
-        }
-        Err(e) => HttpResponse::InternalServerError().body(e.to_string()),
-    }
-}
-
-// Create a new user (GET/users)
-#[get("/get-all")]
-pub async fn get_all_users_controller(service: Data<UserService>, req: HttpRequest) -> HttpResponse {
-    info!("Received request to get all users");
-    // permission
+#[get("/get-all-users")]
+pub async fn get_all_paginate_controller(db: Data<DatabaseConnection>, query: Query<UserQueryOptions>, req: HttpRequest) -> HttpResponse {
     if !has_permission_with_roles(&req, &vec![Role::Admin], &Permission::Read) {
-        return HttpResponse::Forbidden().body("You do not have permission to get users.");
+        return HttpResponse::Forbidden().body("You do not have permission to get users");
     }
 
-    match service.get_all_users_service().await {
+    // input validation
+    if let Err(e) = query.validate() {
+        return HttpResponse::BadRequest().body(e.to_string());
+    }
+
+    let search_text = query.search_text.clone().unwrap_or("".to_string());
+    let page = query.page;
+    let page_size = query.size;
+    match get_all_paginate_service(&db, search_text, page, page_size).await {
         Ok(users) => {
-            let response = GenericResponse {
+            let res = GenericResponse {
                 code: 200,
                 message: "All users".to_string(),
                 data: users,
             };
-            HttpResponse::Ok().json(response)
+            info!("All users: {:?}", res);
+            HttpResponse::Ok().json(res)
         }
-        Err(e) => HttpResponse::InternalServerError().body(e.to_string())
-    }
-}
-/*
-// #[get("/get-all-paginate")]
-// pub async fn get_all_users_paginate_controller(service: Data<UserService>,params:web::Query<QueryOptions>,req:HttpRequest) -> HttpResponse {
-//     // permission
-//     if !has_permission_with_roles(&req,&vec![Role::Admin],&Permission::Read) {
-//         return HttpResponse::Forbidden().body("You do not have permission to get users.");
-//     }
-//
-//    let  search_test =  params.search_text ;
-//    let  page = params.page;
-//    let  size = params.size;
-//
-//
-//     match service.get_all_users_paginate_service(search_test,page,size).await {
-//         Ok(users) => HttpResponse::Ok().json(users),
-//         Err(e) => HttpResponse::InternalServerError().body(e.to_string())
-//     }
-// }
- */
-
-//Update a user by ID (PUT /users/{id})
-#[put("/update/{id}")]
-pub async fn update_user_controller(service: Data<UserService>, update_user: Json<UpdateUser>, id: web::Path<String>, req: HttpRequest) -> HttpResponse {
-    info!("Received request to update user: {:?}",id);
-    // permission
-    if !has_permission_with_roles(&req, &vec![Role::Admin], &Permission::Write) {
-        return HttpResponse::Forbidden().body("You do not have permission to update users.");
-    }
-    // validation
-    if let Err(err) = update_user.validate() {
-        return HttpResponse::BadRequest().body(err.to_string());
-    }
-
-    match service.update_user_service(update_user.into_inner(), id.to_string()).await {
-        Ok(Some(user)) => {
-            let response = GenericResponse {
-                code: 201,
-                message: "User has updated".to_string(),
-                data: user,
-            };
-            HttpResponse::Created().json(response)
+        Err(e) => {
+            error!("Failed get all users {:?}",e);
+            HttpResponse::InternalServerError().body(e.to_string())
         }
-        Ok(None) => HttpResponse::NotFound().body("user not found"),
-        Err(e) => HttpResponse::InternalServerError().body(e.to_string())
-    }
-}
-
-// Delete a user by ID (DELETE /users/{id})
-#[delete("/delete/{id}")]
-pub async fn delete_user_controller(service: Data<UserService>, id: web::Path<String>, req: HttpRequest) -> HttpResponse {
-    info!("Received request to delete user: {:?}",id);
-    // permission
-    if !has_permission_with_roles(&req, &vec![Role::Admin], &Permission::Delete) {
-        return HttpResponse::Forbidden().body("You do not have permission to delete users.");
-    }
-
-    match service.delete_user_service(id.to_string()).await {
-        Ok(_) => {
-            let response = GenericResponse {
-                code: 204,
-                message: "User has deleted".to_string(),
-                data: (),
-            };
-            HttpResponse::NoContent().json(response)
-        }
-        Err(e) => HttpResponse::InternalServerError().body(e.to_string())
     }
 }
 

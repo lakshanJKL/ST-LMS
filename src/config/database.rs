@@ -1,13 +1,21 @@
 use std::env;
-use mongodb::{Client, Database, error::Result};
+use log::{error, info};
+use sea_orm::{Database, DatabaseConnection};
+
 
 /// Connect to MongoDB
-pub async fn get_mongo_client() -> Result<Database> {
+pub async fn establish_connection() -> DatabaseConnection {
     dotenv::dotenv().ok();
 
-    let mongo_uri = env::var("MONGO_URI").expect("MONGO_URI must be set");
-    let db = env::var("DB_NAME").expect("DB_NAME must be set in .env");
+    let db_uri = env::var("DB_URI").expect("DB_URI must be set");
 
-    let client = Client::with_uri_str(&mongo_uri).await?;
-    Ok(client.database(&db))
+    println!("DB URI: {}", &db_uri);
+    info!("successfully db connection");
+    match Database::connect(&db_uri).await {
+        Ok(conn) => conn,
+        Err(e) => {
+            eprintln!("Failed to establish database connection: {}", e);
+            panic!("Exiting due to database connection error");
+        }
+    }
 }
