@@ -2,6 +2,11 @@
 
 ST-LMS project revamped to use SeaORM and PostgreSQL, created as a personal learning project
 
-Language - Rust
-ORM tool - Sea ORM
-Databse  - PostgreSQL
+#### Project Decription
+
+   * Project    - Cargo
+   * Framwork   - Actix-web
+   * Language   - Rust
+   * ORM tool   - Sea ORM
+   * Databse    - PostgreSQL
+   * Packge     - Exe
